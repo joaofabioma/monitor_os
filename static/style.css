@@ -1,0 +1,53 @@
+/* Estilos adicionais podem ser adicionados aqui */
+body {
+    font-family: 'Inter', sans-serif !important;
+    background-color: #f8f9fa;
+    padding-top: 2vh;
+}
+
+.card {
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.progress {
+    height: 25px;
+    margin-bottom: 10px;
+}
+
+.usage-high {
+    background-color: #dc3545 !important;
+}
+
+.usage-medium {
+    background-color: #ffc107 !important;
+}
+
+.usage-low {
+    background-color: #28a745 !important;
+}
+
+.stat-card {
+    text-align: center;
+    padding: 15px;
+}
+
+.stat-value {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: #6c757d;
+}
+
+.update-time {
+    font-size: 12px;
+    color: #6c757d;
+    text-align: right;
+}
+
+.progress-bar {
+    width: var(--disk-percent);
+}

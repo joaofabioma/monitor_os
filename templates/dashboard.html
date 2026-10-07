@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitor - Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+        crossorigin="anonymous"></script>
+
+    <style>
+       
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="mb-4">🔍 Monitoramento</h1>
+        <div class="update-time" id="updateTime">Última atualização: <span id="timestamp">--:--:--</span></div>
+
+        <!-- Status do Sistema -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="stat-value" id="cpuPercent">0%</div>
+                    <div class="stat-label">Uso da CPU</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="stat-value" id="memoryPercent">0%</div>
+                    <div class="stat-label">Uso de Memória</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="stat-value" id="uptime">0d</div>
+                    <div class="stat-label">Tempo Ativo</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card stat-card">
+                    <div class="stat-value" id="hostname">---</div>
+                    <div class="stat-label">Hostname</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Memória e CPU Detalhado -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>Memória RAM</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2">
+                            <span id="memoryUsed">0</span>GB de <span id="memoryTotal">0</span>GB
+                            <div class="progress">
+                                <div id="memoryProgress" class="progress-bar" role="progressbar"></div>
+                            </div>
+                        </div>
+                        <small>Swap: <span id="swapUsed">0</span>GB de <span id="swapTotal">0</span>GB usado</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5>CPU</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-2">
+                            Uso: <span id="cpuUsage">0</span>%
+                            <div class="progress">
+                                <div id="cpuProgress" class="progress-bar" role="progressbar"></div>
+                            </div>
+                        </div>
+                        <small>Núcleos: <span id="cpuCores">0</span> | Frequência: <span id="cpuFreq">0</span>
+                            MHz</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Armazenamento -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>💾 Armazenamento (400GB Total)</h5>
+            </div>
+            <div class="card-body">
+                {% for disk in disk_info %}
+                <div class="mb-3">
+                    <strong>{{ disk.mountpoint }}</strong> ({{ disk.device }} - {{ disk.fstype }})
+                    <div class="d-flex justify-content-between">
+                        <span>{{ "%.2f"|format(disk.used_gb) }}GB usado / {{ "%.2f"|format(disk.total_gb) }}GB
+                            total</span>
+                        <span>{{ disk.percent|round(1) }}%</span>
+                    </div>
+                    <div class="progress">
+                        {% set usage_class = 'usage-high' if disk.percent > 80 else 'usage-medium' if disk.percent > 60
+                        else 'usage-low' %}
+                        <div class="progress-bar {{ usage_class }}" style="--disk-percent: {{ disk.percent }}%">
+                        </div>
+                    </div>
+                    <small class="text-muted">Livre: {{ "%.2f"|format(disk.free_gb) }}GB | Opções: {{ disk.opts
+                        }}</small>
+                </div>
+                <hr>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Diretórios Grandes -->
+        {% if large_dirs %}
+        <div class="card">
+            <div class="card-header">
+                <h5>📂 Maiores Diretórios (em /)</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Diretório</th>
+                                <th>Tamanho (GB)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for dir in large_dirs %}
+                            <tr>
+                                <td><code>{{ dir.path }}</code></td>
+                                <td><strong>{{ "%.2f"|format(dir.size_gb) }} GB</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <small class="text-muted">Mostrando os 10 maiores diretórios</small>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <script>
+        function updateDashboard() {
+            fetch('/api/update')
+                .then(response => response.json())
+                .then(data => {
+                    // Atualiza timestamp
+                    document.getElementById('timestamp').textContent = data.timestamp;
+
+                    // Atualiza CPU
+                    const cpuPercent = data.system.cpu.percent;
+                    document.getElementById('cpuPercent').textContent = cpuPercent.toFixed(1) + '%';
+                    document.getElementById('cpuUsage').textContent = cpuPercent.toFixed(1);
+                    document.getElementById('cpuCores').textContent = data.system.cpu.cores;
+                    document.getElementById('cpuFreq').textContent = data.system.cpu.freq_mhz;
+
+                    const cpuBar = document.getElementById('cpuProgress');
+                    cpuBar.style.width = cpuPercent + '%';
+                    cpuBar.textContent = cpuPercent.toFixed(1) + '%';
+                    cpuBar.className = 'progress-bar ' +
+                        (cpuPercent > 80 ? 'usage-high' : cpuPercent > 60 ? 'usage-medium' : 'usage-low');
+
+                    // Atualiza Memória
+                    const memPercent = data.system.memory.percent;
+                    document.getElementById('memoryPercent').textContent = memPercent.toFixed(1) + '%';
+                    document.getElementById('memoryUsed').textContent = data.system.memory.used_gb;
+                    document.getElementById('memoryTotal').textContent = data.system.memory.total_gb;
+                    document.getElementById('swapUsed').textContent = data.system.swap.used_gb;
+                    document.getElementById('swapTotal').textContent = data.system.swap.total_gb;
+
+                    const memBar = document.getElementById('memoryProgress');
+                    memBar.style.width = memPercent + '%';
+                    memBar.textContent = memPercent.toFixed(1) + '%';
+                    memBar.className = 'progress-bar ' +
+                        (memPercent > 80 ? 'usage-high' : memPercent > 60 ? 'usage-medium' : 'usage-low');
+
+                    // Atualiza outros
+                    document.getElementById('uptime').textContent =
+                        data.system.system.uptime_days + 'd ' + data.system.system.uptime_hours + 'h';
+                    document.getElementById('hostname').textContent = data.system.system.hostname;
+                })
+                .catch(error => console.error('Erro ao atualizar:', error));
+        }
+
+        // Atualiza a cada 5 segundos
+        setInterval(updateDashboard, 5000);
+
+        // Primeira atualização
+        document.addEventListener('DOMContentLoaded', updateDashboard);
+    </script>
+</body>
+
+</html>
